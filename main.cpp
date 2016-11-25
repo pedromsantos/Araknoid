@@ -161,7 +161,48 @@ struct Block : Rectangle
         shape.setOrigin(paddleWidth / 2.f, paddleHeight / 2.f);
     }
 
-    virtual Block updateBallDirectionOnCollision(Ball &ball);
+    virtual Block updateBallDirectionOnCollision(Ball &ball)
+    {
+        if(!isIntersecting(ball))
+        {
+            return *this;
+        }
+
+        float overlapLeft{ball.Right() - this->Left()};
+        float overlapRight{this->Right() - ball.Left()};
+        float overlapTop{ball.Top() - ball.Bottom()};
+        float overlapBottom{this->Bottom() - ball.Top()};
+
+        bool ballFromLeft{std::abs(overlapLeft) < std::abs(overlapRight)};
+        bool ballFromTop{std::abs(overlapTop) < std::abs(overlapBottom)};
+        float minOverlapX{ballFromLeft ? overlapLeft : overlapRight};
+        float minOverlapY{ballFromTop ? overlapTop : overlapBottom};
+
+        if(std::abs(minOverlapX) < std::abs(minOverlapY))
+        {
+            if(ballFromLeft)
+            {
+                ball.moveLeft();
+            }
+            else
+            {
+                ball.moveRight();
+            }
+        }
+        else
+        {
+            if(ballFromTop)
+            {
+                ball.moveUp();
+            }
+            else
+            {
+                ball.moveDown();
+            }
+        }
+
+        return Block(0, 0);
+    }
 };
 
 struct DestroyedBlock : Block
@@ -186,49 +227,6 @@ inline bool operator==(Block& left, Block& right)
 inline bool operator!=(Block& left, Block& right)
 {
     return !(left == right);
-}
-
-Block Block::updateBallDirectionOnCollision(Ball &ball)
-{
-    if(!isIntersecting(ball))
-    {
-        return *this;
-    }
-
-    float overlapLeft{ball.Right() - this->Left()};
-    float overlapRight{this->Right() - ball.Left()};
-    float overlapTop{ball.Top() - ball.Bottom()};
-    float overlapBottom{this->Bottom() - ball.Top()};
-
-    bool ballFromLeft{std::abs(overlapLeft) < std::abs(overlapRight)};
-    bool ballFromTop{std::abs(overlapTop) < std::abs(overlapBottom)};
-    float minOverlapX{ballFromLeft ? overlapLeft : overlapRight};
-    float minOverlapY{ballFromTop ? overlapTop : overlapBottom};
-
-    if(std::abs(minOverlapX) < std::abs(minOverlapY))
-    {
-        if(ballFromLeft)
-        {
-            ball.moveLeft();
-        }
-        else
-        {
-            ball.moveRight();
-        }
-    }
-    else
-    {
-        if(ballFromTop)
-        {
-            ball.moveUp();
-        }
-        else
-        {
-            ball.moveDown();
-        }
-    }
-
-    return DestroyedBlock(0, 0);
 }
 
 class Game
