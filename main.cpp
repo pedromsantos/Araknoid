@@ -9,7 +9,7 @@ constexpr int countBlocksX{11}, countBlocksY{4};
 
 struct Object
 {
-    virtual const float X() = 0;
+    virtual const float X() = 0 ;
     virtual const float Y() = 0;
     virtual const float Left() = 0;
     virtual const float Right() = 0;
@@ -67,9 +67,20 @@ struct Ball : Object
     float const Bottom() { return Y() + shape.getRadius(); }
 };
 
-struct Paddle : Object
+struct Rectangle : Object
 {
     sf::RectangleShape shape;
+
+    float const X() { return shape.getPosition().x; }
+    float const Y() { return shape.getPosition().y; }
+    float const Left() { return X() - shape.getSize().x / 2.f; }
+    float const Right() { return X() + shape.getSize().x / 2.f; }
+    float const Top() { return Y() - shape.getSize().x / 2.f; }
+    float const Bottom() { return Y() + shape.getSize().x / 2.f; }
+};
+
+struct Paddle : Rectangle
+{
     sf::Vector2f velocity;
 
     Paddle(int x, int y)
@@ -118,19 +129,10 @@ struct Paddle : Object
             ball.velocity.x = ballVelocity;
         }
     }
-
-    float const X() { return shape.getPosition().x; }
-    float const Y() { return shape.getPosition().y; }
-    float const Left() { return X() - shape.getSize().x / 2.f; }
-    float const Right() { return X() + shape.getSize().x / 2.f; }
-    float const Top() { return Y() - shape.getSize().x / 2.f; }
-    float const Bottom() { return Y() + shape.getSize().x / 2.f; }
 };
 
-struct Block : Object
+struct Block : Rectangle
 {
-    sf::RectangleShape shape;
-
     Block(int x, int y)
     {
         shape.setPosition(x, y);
@@ -138,13 +140,6 @@ struct Block : Object
         shape.setFillColor(sf::Color::Yellow);
         shape.setOrigin(paddleWidth / 2.f, paddleHeight / 2.f);
     }
-
-    float const X() { return shape.getPosition().x; }
-    float const Y() { return shape.getPosition().y; }
-    float const Left() { return X() - shape.getSize().x / 2.f; }
-    float const Right() { return X() + shape.getSize().x / 2.f; }
-    float const Top() { return Y() - shape.getSize().x / 2.f; }
-    float const Bottom() { return Y() + shape.getSize().x / 2.f; }
 
     virtual std::unique_ptr<Block> collidingWith(Ball &ball);
 };
@@ -192,86 +187,100 @@ std::unique_ptr<Block> Block::collidingWith(Ball &ball)
     return  std::make_unique<DestroyedBlock>((int)this->X(), (int)this->Y());
 }
 
-void initializeBlocks(std::vector<std::unique_ptr<Block>> &blocks);
-
-void handleBlockCollisions(Ball &ball, std::vector<std::unique_ptr<Block>> &blocks);
-
-void redrawObjects(sf::RenderWindow &window, const Ball &ball, const Paddle &paddle,
-                   const std::vector<std::unique_ptr<Block>> &blocks);
-
-int main(int argc, char* argv[]) {
+class Game
+{
+private:
     sf::RenderWindow window{{windowWidth, windowHeight}, "Arkanoid - 1"};
-    window.setFramerateLimit(60);
 
     Ball ball{windowWidth / 2, windowHeight / 2};
     Paddle paddle{windowWidth / 2, windowHeight - 50};
     std::vector<std::unique_ptr<Block>> blocks;
 
-    initializeBlocks(blocks);
+public:
 
-    while(window.isOpen())
+    void run()
     {
-        sf::Event Event;
+        window.setFramerateLimit(60);
+        createBlocks();
 
-        while (window.pollEvent(Event))
+        while(window.isOpen())
         {
-            if (Event.type == sf::Event::Closed)
+            window.clear(sf::Color::Black);
+
+            input();
+            update();
+            draw();
+
+            window.display();
+        }
+    }
+
+private:
+    void createBlocks()
+    {
+        for (int x{0}; x < countBlocksX; ++x)
+        {
+            for (int y{0}; y < countBlocksY; ++y)
+            {
+                auto block = std::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
+                                                     (y + 2) * (blockHeight + 3));
+
+                blocks.push_back(move(block));
+            }
+        }
+    }
+
+    void input()
+    {
+        sf::Event event;
+
+        while(window.pollEvent(event))
+        {
+            if(event.type == sf::Event::Closed)
             {
                 window.close();
+                break;
             }
 
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
             {
                 window.close();
-           }
+            }
         }
+    }
 
-        window.clear(sf::Color::Black);
-
+    void update()
+    {
         ball.update();
         paddle.update();
 
         paddle.collidingWith(ball);
-        handleBlockCollisions(ball, blocks);
-
-        redrawObjects(window, ball, paddle, blocks);
-
-        window.display();
+        handleBlockCollisions();
     }
 
-    return 0;
-}
-
-void redrawObjects(sf::RenderWindow &window, const Ball &ball, const Paddle &paddle,
-                   const std::vector<std::unique_ptr<Block>> &blocks)
-{
-    for(auto& block: blocks)
+    void draw()
     {
-        window.draw(block->shape);
-    }
-
-    window.draw(paddle.shape);
-    window.draw(ball.shape);
-}
-
-void handleBlockCollisions(Ball &ball, std::vector<std::unique_ptr<Block>> &blocks)
-{
-    for (int i = 0; i < blocks.size(); ++i)
-    {
-        blocks[i] = std::move(blocks[i]->collidingWith(ball));
-    }
-}
-
-void initializeBlocks(std::vector<std::unique_ptr<Block>> &blocks)
-{
-    for (int x{0}; x < countBlocksX; ++x)
-    {
-        for (int y{0}; y < countBlocksY; ++y)
+        for(auto& block: blocks)
         {
-            auto block = std::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
-                                (y + 2) * (blockHeight + 3));
+            window.draw(block->shape);
+        }
 
-            blocks.push_back(move(block));
+        window.draw(paddle.shape);
+        window.draw(ball.shape);
+    }
+
+    void handleBlockCollisions()
+    {
+        for (int i = 0; i < blocks.size(); ++i)
+        {
+            blocks[i] = std::move(blocks[i]->collidingWith(ball));
         }
     }
+};
+
+int main(int argc, char* argv[]) {
+
+    Game{}.run();
+
+    return 0;
 }
