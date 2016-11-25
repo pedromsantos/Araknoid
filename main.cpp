@@ -26,7 +26,6 @@ struct Object
 struct Ball : Object
 {
     sf::CircleShape shape;
-
     sf::Vector2f velocity{-ballVelocity, -ballVelocity};
 
     Ball(float x, float y)
@@ -259,7 +258,7 @@ void handleBlockCollisions(Ball &ball, std::vector<std::unique_ptr<Block>> &bloc
 {
     for (int i = 0; i < blocks.size(); ++i)
     {
-        blocks[i] = move(blocks[i]->collidingWith(ball));
+        blocks[i] = std::move(blocks[i]->collidingWith(ball));
     }
 }
 
@@ -269,7 +268,7 @@ void initializeBlocks(std::vector<std::unique_ptr<Block>> &blocks)
     {
         for (int y{0}; y < countBlocksY; ++y)
         {
-            auto block = std::__1::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
+            auto block = std::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
                                 (y + 2) * (blockHeight + 3));
 
             blocks.push_back(move(block));
