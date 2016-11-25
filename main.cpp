@@ -161,7 +161,7 @@ struct Block : Rectangle
         shape.setOrigin(paddleWidth / 2.f, paddleHeight / 2.f);
     }
 
-    virtual std::unique_ptr<Block> updateBallDirectionOnCollision(Ball &ball);
+    virtual Block updateBallDirectionOnCollision(Ball &ball);
 };
 
 struct DestroyedBlock : Block
@@ -172,17 +172,27 @@ struct DestroyedBlock : Block
         shape.setFillColor(sf::Color::Black);
     }
 
-    std::unique_ptr<Block> updateBallDirectionOnCollision(Ball &ball) override
+    Block updateBallDirectionOnCollision(Ball &ball) override
     {
-        return std::make_unique<DestroyedBlock>(this->X(), this->Y());
+        return *this;
     }
 };
 
-std::unique_ptr<Block> Block::updateBallDirectionOnCollision(Ball &ball)
+inline bool operator==(Block& left, Block& right)
+{
+    return left.X() == right.X() && left.Y() == right.Y();
+}
+
+inline bool operator!=(Block& left, Block& right)
+{
+    return !(left == right);
+}
+
+Block Block::updateBallDirectionOnCollision(Ball &ball)
 {
     if(!isIntersecting(ball))
     {
-        return std::make_unique<Block>(this->X(), this->Y());;
+        return *this;
     }
 
     float overlapLeft{ball.Right() - this->Left()};
@@ -218,7 +228,7 @@ std::unique_ptr<Block> Block::updateBallDirectionOnCollision(Ball &ball)
         }
     }
 
-    return  std::make_unique<DestroyedBlock>((int)this->X(), (int)this->Y());
+    return DestroyedBlock(0, 0);
 }
 
 class Game
@@ -256,8 +266,9 @@ private:
         {
             for (int y{0}; y < countBlocksY; ++y)
             {
-                auto block = std::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
-                                                     (y + 2) * (blockHeight + 3));
+                auto block =
+                        std::make_unique<Block>((x + 1) * (blockWidth + 3) + 22,
+                                                (y + 2) * (blockHeight + 3));
 
                 blocks.push_back(move(block));
             }
@@ -307,7 +318,13 @@ private:
     {
         for (int i = 0; i < blocks.size(); ++i)
         {
-            blocks[i] = std::move(blocks[i]->updateBallDirectionOnCollision(ball));
+            auto block = *blocks[i];
+            auto newBlock = block.updateBallDirectionOnCollision(ball);
+
+            if(block != newBlock)
+            {
+                blocks[i] = std::make_unique<DestroyedBlock>(0,0);
+            }
         }
     }
 };
