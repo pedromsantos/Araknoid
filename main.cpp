@@ -42,21 +42,41 @@ struct Ball : Object
 
         if(Left() < 0)
         {
-            velocity.x = ballVelocity;
+            moveRight();
         }
         else if(Right() > windowWidth)
         {
-            velocity.x = -ballVelocity;
+            moveLeft();
         }
 
         if(Top() < 0)
         {
-            velocity.y = ballVelocity;
+            moveDown();
         }
         else if(Bottom() > windowHeight)
         {
-            velocity.y = -ballVelocity;
+            moveUp();
         }
+    }
+
+    void moveLeft()
+    {
+        velocity.x = -ballVelocity;
+    }
+
+    void moveRight()
+    {
+        velocity.x = ballVelocity;
+    }
+
+    void moveDown()
+    {
+        velocity.y = ballVelocity;
+    }
+
+    void moveUp()
+    {
+        velocity.y = -ballVelocity;
     }
 
     float const X() { return shape.getPosition().x; }
@@ -118,15 +138,15 @@ struct Paddle : Rectangle
             return;
         }
 
-        ball.velocity.y = -ballVelocity;
+        ball.moveUp();
 
         if(ball.X() < this->X())
         {
-            ball.velocity.x = -ballVelocity;
+            ball.moveLeft();
         }
         else
         {
-            ball.velocity.x = ballVelocity;
+            ball.moveRight();
         }
     }
 };
@@ -177,11 +197,25 @@ std::unique_ptr<Block> Block::collidingWith(Ball &ball)
 
     if(std::abs(minOverlapX) < std::abs(minOverlapY))
     {
-        ball.velocity.x = ballFromLeft ? -ballVelocity : ballVelocity;
+        if(ballFromLeft)
+        {
+            ball.moveLeft();
+        }
+        else
+        {
+            ball.moveRight();
+        }
     }
     else
     {
-        ball.velocity.y = ballFromTop ? -ballVelocity : ballVelocity;
+        if(ballFromTop)
+        {
+            ball.moveUp();
+        }
+        else
+        {
+            ball.moveDown();
+        }
     }
 
     return  std::make_unique<DestroyedBlock>((int)this->X(), (int)this->Y());
@@ -255,7 +289,7 @@ private:
         paddle.update();
 
         paddle.collidingWith(ball);
-        handleBlockCollisions();
+        blockCollisions();
     }
 
     void draw()
@@ -269,7 +303,7 @@ private:
         window.draw(ball.shape);
     }
 
-    void handleBlockCollisions()
+    void blockCollisions()
     {
         for (int i = 0; i < blocks.size(); ++i)
         {
