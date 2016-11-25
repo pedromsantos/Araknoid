@@ -9,12 +9,12 @@ constexpr int countBlocksX{11}, countBlocksY{4};
 
 struct Object
 {
-    virtual float X() = 0;
-    virtual float Y() = 0;
-    virtual float Left() = 0;
-    virtual float Right() = 0;
-    virtual float Top() = 0;
-    virtual float Bottom() = 0;
+    virtual const float X() = 0;
+    virtual const float Y() = 0;
+    virtual const float Left() = 0;
+    virtual const float Right() = 0;
+    virtual const float Top() = 0;
+    virtual const float Bottom() = 0;
 
     template<class T> bool isIntersecting(T& other)
     {
@@ -59,12 +59,12 @@ struct Ball : Object
         }
     }
 
-    float X() { return shape.getPosition().x; }
-    float Y() { return shape.getPosition().y; }
-    float Left() { return X() - shape.getRadius(); }
-    float Right() { return X() + shape.getRadius(); }
-    float Top() { return Y() - shape.getRadius(); }
-    float Bottom() { return Y() + shape.getRadius(); }
+    float const X() { return shape.getPosition().x; }
+    float const Y() { return shape.getPosition().y; }
+    float const Left() { return X() - shape.getRadius(); }
+    float const Right() { return X() + shape.getRadius(); }
+    float const Top() { return Y() - shape.getRadius(); }
+    float const Bottom() { return Y() + shape.getRadius(); }
 };
 
 struct Paddle : Object
@@ -119,12 +119,12 @@ struct Paddle : Object
         }
     }
 
-    float X() { return shape.getPosition().x; }
-    float Y() { return shape.getPosition().y; }
-    float Left() { return X() - shape.getSize().x / 2.f; }
-    float Right() { return X() + shape.getSize().x / 2.f; }
-    float Top() { return Y() - shape.getSize().x / 2.f; }
-    float Bottom() { return Y() + shape.getSize().x / 2.f; }
+    float const X() { return shape.getPosition().x; }
+    float const Y() { return shape.getPosition().y; }
+    float const Left() { return X() - shape.getSize().x / 2.f; }
+    float const Right() { return X() + shape.getSize().x / 2.f; }
+    float const Top() { return Y() - shape.getSize().x / 2.f; }
+    float const Bottom() { return Y() + shape.getSize().x / 2.f; }
 };
 
 struct Block : Object
@@ -139,12 +139,12 @@ struct Block : Object
         shape.setOrigin(paddleWidth / 2.f, paddleHeight / 2.f);
     }
 
-    float X() { return shape.getPosition().x; }
-    float Y() { return shape.getPosition().y; }
-    float Left() { return X() - shape.getSize().x / 2.f; }
-    float Right() { return X() + shape.getSize().x / 2.f; }
-    float Top() { return Y() - shape.getSize().x / 2.f; }
-    float Bottom() { return Y() + shape.getSize().x / 2.f; }
+    float const X() { return shape.getPosition().x; }
+    float const Y() { return shape.getPosition().y; }
+    float const Left() { return X() - shape.getSize().x / 2.f; }
+    float const Right() { return X() + shape.getSize().x / 2.f; }
+    float const Top() { return Y() - shape.getSize().x / 2.f; }
+    float const Bottom() { return Y() + shape.getSize().x / 2.f; }
 
     virtual std::unique_ptr<Block> collidingWith(Ball &ball);
 };
