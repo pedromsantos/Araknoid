@@ -289,7 +289,7 @@ private:
         paddle.update();
 
         paddle.updateBallDirectionOnCollision(ball);
-        blockCollisions();
+        updateBallDirectionOnBlockCollision();
     }
 
     void draw()
@@ -303,7 +303,7 @@ private:
         window.draw(ball.shape);
     }
 
-    void blockCollisions()
+    void updateBallDirectionOnBlockCollision()
     {
         for (int i = 0; i < blocks.size(); ++i)
         {
