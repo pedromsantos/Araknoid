@@ -131,7 +131,7 @@ struct Paddle : Rectangle
         }
     }
 
-    void collidingWith(Ball &ball)
+    void updateBallDirectionOnCollision(Ball &ball)
     {
         if(!isIntersecting(ball))
         {
@@ -161,7 +161,7 @@ struct Block : Rectangle
         shape.setOrigin(paddleWidth / 2.f, paddleHeight / 2.f);
     }
 
-    virtual std::unique_ptr<Block> collidingWith(Ball &ball);
+    virtual std::unique_ptr<Block> updateBallDirectionOnCollision(Ball &ball);
 };
 
 struct DestroyedBlock : Block
@@ -172,13 +172,13 @@ struct DestroyedBlock : Block
         shape.setFillColor(sf::Color::Black);
     }
 
-    std::unique_ptr<Block> collidingWith(Ball &ball) override
+    std::unique_ptr<Block> updateBallDirectionOnCollision(Ball &ball) override
     {
         return std::make_unique<DestroyedBlock>(this->X(), this->Y());
     }
 };
 
-std::unique_ptr<Block> Block::collidingWith(Ball &ball)
+std::unique_ptr<Block> Block::updateBallDirectionOnCollision(Ball &ball)
 {
     if(!isIntersecting(ball))
     {
@@ -288,7 +288,7 @@ private:
         ball.update();
         paddle.update();
 
-        paddle.collidingWith(ball);
+        paddle.updateBallDirectionOnCollision(ball);
         blockCollisions();
     }
 
@@ -307,7 +307,7 @@ private:
     {
         for (int i = 0; i < blocks.size(); ++i)
         {
-            blocks[i] = std::move(blocks[i]->collidingWith(ball));
+            blocks[i] = std::move(blocks[i]->updateBallDirectionOnCollision(ball));
         }
     }
 };
