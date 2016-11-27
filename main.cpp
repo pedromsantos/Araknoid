@@ -94,20 +94,22 @@ namespace Arkanoid
         void delGroup(Group mGroup) noexcept { groupBitset[mGroup] = false; }
 
         template <typename T, typename... TArgs>
-        T& addComponent(TArgs&&... mArgs)
+        void addComponent(TArgs&&... mArgs)
         {
             assert(!hasComponent<T>());
 
-            T* c(new T(std::forward<TArgs>(mArgs)...));
-            c->entity = this;
-            std::unique_ptr<Component> uPtr{c};
+            T* component(new T(std::forward<TArgs>(mArgs)...));
+            component->entity = this;
+            std::unique_ptr<Component> uPtr{component};
             components.emplace_back(std::move(uPtr));
 
-            componentArray[getComponentTypeID<T>()] = c;
+            //auto component = std::make_unique<T>(mArgs...);
+            //components.emplace_back(std::move(component));
+
+            componentArray[getComponentTypeID<T>()] = component;
             componentBitset[getComponentTypeID<T>()] = true;
 
-            c->init();
-            return *c;
+            component->init();
         }
 
         template <typename T>
@@ -207,7 +209,6 @@ namespace Arkanoid
 
     struct CPhysics : Component
     {
-        CPosition* cPosition{nullptr};
         Vector2f velocity, halfSize;
 
         std::function<void(const Vector2f&)> onOutOfBounds;
@@ -216,12 +217,16 @@ namespace Arkanoid
 
         void init() override
         {
-            cPosition = &entity->getComponent<CPosition>();
+        }
+
+        CPosition* Position() const
+        {
+            return &entity->getComponent<CPosition>();
         }
 
         void update(float mFT) override
         {
-            cPosition->position += velocity * mFT;
+            Position()->position += velocity * mFT;
 
             if(onOutOfBounds == nullptr) return;
 
@@ -236,8 +241,8 @@ namespace Arkanoid
                 onOutOfBounds(Vector2f{0.f, -1.f});
         }
 
-        float x() const noexcept { return cPosition->x(); }
-        float y() const noexcept { return cPosition->y(); }
+        float x() const noexcept { return Position()->x(); }
+        float y() const noexcept { return Position()->y(); }
         float left() const noexcept { return x() - halfSize.x; }
         float right() const noexcept { return x() + halfSize.x; }
         float top() const noexcept { return y() - halfSize.y; }
@@ -246,16 +251,18 @@ namespace Arkanoid
 
     struct CCircle : Component
     {
-        CPosition* cPosition{nullptr};
         CircleShape shape;
         float radius;
 
         CCircle(float mRadius) : radius{mRadius} {}
 
+        CPosition* Position() const
+        {
+            return &entity->getComponent<CPosition>();
+        }
+
         void init() override
         {
-            cPosition = &entity->getComponent<CPosition>();
-
             shape.setRadius(radius);
             shape.setFillColor(Color::Red);
             shape.setOrigin(radius, radius);
@@ -263,7 +270,7 @@ namespace Arkanoid
 
         void update(float mFT) override
         {
-            shape.setPosition(cPosition->position);
+            shape.setPosition(Position()->position);
         }
 
         void draw(sf::RenderWindow& renderWindow) override
@@ -274,7 +281,6 @@ namespace Arkanoid
 
     struct CRectangle : Component
     {
-        CPosition* cPosition{nullptr};
         RectangleShape shape;
         Vector2f size;
 
@@ -286,14 +292,18 @@ namespace Arkanoid
 
         void init() override
         {
-            cPosition = &entity->getComponent<CPosition>();
             shape.setSize(size);
             shape.setOrigin(size.x / 2.f, size.y / 2.f);
         }
 
+        CPosition* Position() const
+        {
+            return &entity->getComponent<CPosition>();
+        }
+
         void update(float mFT) override
         {
-            shape.setPosition(cPosition->position);
+            shape.setPosition(Position()->position);
         }
 
         void draw(sf::RenderWindow& renderWindow) override
@@ -304,12 +314,18 @@ namespace Arkanoid
 
     struct CPaddleControl : Component
     {
-        CPhysics* cPhysics{nullptr};
+        void init() override
+        {
+        }
 
-        void init() override { cPhysics = &entity->getComponent<CPhysics>(); }
+        CPhysics* Physics() const
+        {
+            return &entity->getComponent<CPhysics>();
+        }
 
         void update(FrameTime mFT) override
         {
+            auto cPhysics =  Physics();
             if(Keyboard::isKeyPressed(Keyboard::Key::Left) &&
                cPhysics->left() > 0)
                 cPhysics->velocity.x = -paddleVelocity;
