@@ -10,7 +10,6 @@ namespace Arkanoid
     struct Component;
     class Entity;
     class Manager;
-    class Game;
 
     using ComponentID = std::size_t;
     using Group = std::size_t;
@@ -45,9 +44,9 @@ namespace Arkanoid
     {
         Entity* entity;
 
-        virtual void init() {}
+        virtual void init() {};
         virtual void update(float mFT) {}
-        virtual void draw(Game* game) {}
+        virtual void draw(sf::RenderWindow& renderWindow) {}
 
         virtual ~Component() {}
     };
@@ -71,9 +70,10 @@ namespace Arkanoid
         {
             for(auto& c : components) c->update(mFT);
         }
-        void draw(Game* game)
+
+        void draw(sf::RenderWindow& renderWindow)
         {
-            for(auto& c : components) c->draw(game);
+            for(auto& c : components) c->draw(renderWindow);
         }
 
         bool isAlive() const { return alive; }
@@ -130,9 +130,9 @@ namespace Arkanoid
         {
             for(auto& e : entities) e->update(mFT);
         }
-        void draw(Game* game)
+        void draw(sf::RenderWindow& renderWindow)
         {
-            for(auto& e : entities) e->draw(game);
+            for(auto& e : entities) e->draw(renderWindow);
         }
 
         void addToGroup(Entity* mEntity, Group mGroup)
@@ -265,7 +265,11 @@ namespace Arkanoid
         {
             shape.setPosition(cPosition->position);
         }
-        void draw(Game* game) override;
+
+        void draw(sf::RenderWindow& renderWindow) override
+        {
+            renderWindow.draw(shape);
+        }
     };
 
     struct CRectangle : Component
@@ -292,7 +296,11 @@ namespace Arkanoid
         {
             shape.setPosition(cPosition->position);
         }
-        void draw(Game* game) override;
+
+        void draw(sf::RenderWindow& renderWindow) override
+        {
+            renderWindow.draw(shape);
+        }
     };
 
     struct CPaddleControl : Component
@@ -449,13 +457,15 @@ namespace Arkanoid
             BallFactory::create(manager);
 
             for(int iX{0}; iX < countBlocksX; ++iX)
-                for(int iY{0}; iY < countBlocksY; ++iY)
+            {
+                for (int iY{0}; iY < countBlocksY; ++iY)
                 {
                     auto position = Vector2f{(iX + 1) * (blockWidth + 3) + 22,
                                              (iY + 2) * (blockHeight + 3)};
 
                     BrickFactory::create(manager, position);
                 }
+            }
         }
 
         void run()
@@ -525,14 +535,10 @@ namespace Arkanoid
         }
         void drawPhase()
         {
-            manager.draw(this);
+            manager.draw(this->window);
             window.display();
         }
-        void render(const Drawable& mDrawable) { window.draw(mDrawable); }
     };
-
-    void CCircle::draw(Game* game) { game->render(shape); }
-    void CRectangle::draw(Game* game) { game->render(shape); }
 }
 
 int main()
