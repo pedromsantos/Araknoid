@@ -360,22 +360,16 @@ namespace CompositionArkanoid
             cpBall.velocity.y = ballFromTop ? -ballVelocity : ballVelocity;
     }
 
-    struct Game
+    enum ArkanoidGroup : std::size_t
     {
-        enum ArkanoidGroup : std::size_t
-        {
-            GPaddle,
-            GBrick,
-            GBall
-        };
+        GPaddle,
+        GBrick,
+        GBall
+    };
 
-        RenderWindow window{
-                {windowWidth, windowHeight}, "Arkanoid - Components"};
-        FrameTime lastFt{0.f}, currentSlice{0.f};
-        bool running{false};
-        Manager manager;
-
-        void createBall()
+    struct BallFactory
+    {
+        static void create(Manager& manager)
         {
             auto entity = std::make_unique<Entity>(manager);
 
@@ -401,8 +395,11 @@ namespace CompositionArkanoid
 
             manager.addEntity(std::move(entity));
         }
+    };
 
-        void createBrick(const Vector2f& mPosition)
+    struct BrickFactory
+    {
+        static void create(Manager& manager, const Vector2f& mPosition)
         {
             Vector2f halfSize{blockWidth / 2.f, blockHeight / 2.f};
             auto entity = std::make_unique<Entity>(manager);
@@ -415,8 +412,11 @@ namespace CompositionArkanoid
 
             manager.addEntity(std::move(entity));
         }
+    };
 
-        void createPaddle()
+    struct PaddleFactory
+    {
+        static void create(Manager& manager)
         {
             Vector2f halfSize{paddleWidth / 2.f, paddleHeight / 2.f};
             auto entity = std::make_unique<Entity>(manager);
@@ -431,18 +431,31 @@ namespace CompositionArkanoid
 
             manager.addEntity(std::move(entity));
         }
+    };
+
+    struct Game
+    {
+        RenderWindow window{
+                {windowWidth, windowHeight}, "Arkanoid - Components"};
+        FrameTime lastFt{0.f}, currentSlice{0.f};
+        bool running{false};
+        Manager manager;
 
         Game()
         {
             window.setFramerateLimit(240);
 
-            createPaddle();
-            createBall();
+            PaddleFactory::create(manager);
+            BallFactory::create(manager);
 
             for(int iX{0}; iX < countBlocksX; ++iX)
                 for(int iY{0}; iY < countBlocksY; ++iY)
-                    createBrick(Vector2f{(iX + 1) * (blockWidth + 3) + 22,
-                                         (iY + 2) * (blockHeight + 3)});
+                {
+                    auto position = Vector2f{(iX + 1) * (blockWidth + 3) + 22,
+                                             (iY + 2) * (blockHeight + 3)};
+
+                    BrickFactory::create(manager, position);
+                }
         }
 
         void run()
