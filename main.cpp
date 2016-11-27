@@ -9,7 +9,7 @@ namespace Arkanoid
 {
     struct Component;
     class Entity;
-    class Container;
+    class EntityContainer;
 
     using ComponentID = std::size_t;
     using Group = std::size_t;
@@ -54,7 +54,7 @@ namespace Arkanoid
     class Entity
     {
     private:
-        Container& container;
+        EntityContainer& container;
 
         bool alive{true};
         std::vector<std::unique_ptr<Component>> components;
@@ -64,7 +64,7 @@ namespace Arkanoid
         GroupBitset groupBitset;
 
     public:
-        Entity(Container& container) : container(container) {}
+        Entity(EntityContainer& container) : container(container) {}
 
         void update(float mFT)
         {
@@ -119,7 +119,7 @@ namespace Arkanoid
         }
     };
 
-    struct Container
+    struct EntityContainer
     {
     private:
         std::vector<std::unique_ptr<Entity>> entities;
@@ -328,7 +328,7 @@ namespace Arkanoid
                mA.bottom() >= mB.top() && mA.top() <= mB.bottom();
     }
 
-    void testCollisionPB(Entity& mPaddle, Entity& mBall) noexcept
+    void testCollisionPaddleBall(Entity &mPaddle, Entity &mBall) noexcept
     {
         auto& cpPaddle(mPaddle.getComponent<CPhysics>());
         auto& cpBall(mBall.getComponent<CPhysics>());
@@ -342,7 +342,7 @@ namespace Arkanoid
             cpBall.velocity.x = ballVelocity;
     }
 
-    void testCollisionBB(Entity& mBrick, Entity& mBall) noexcept
+    void testCollisionBrickBall(Entity &mBrick, Entity &mBall) noexcept
     {
         auto& cpBrick(mBrick.getComponent<CPhysics>());
         auto& cpBall(mBall.getComponent<CPhysics>());
@@ -376,7 +376,7 @@ namespace Arkanoid
 
     struct BallFactory
     {
-        static void create(Container& container)
+        static void create(EntityContainer& container)
         {
             auto entity = std::make_unique<Entity>(container);
 
@@ -406,7 +406,7 @@ namespace Arkanoid
 
     struct BrickFactory
     {
-        static void create(Container& container, const Vector2f& mPosition)
+        static void create(EntityContainer& container, const Vector2f& mPosition)
         {
             Vector2f halfSize{blockWidth / 2.f, blockHeight / 2.f};
             auto entity = std::make_unique<Entity>(container);
@@ -423,7 +423,7 @@ namespace Arkanoid
 
     struct PaddleFactory
     {
-        static void create(Container& container)
+        static void create(EntityContainer& container)
         {
             Vector2f halfSize{paddleWidth / 2.f, paddleHeight / 2.f};
             auto entity = std::make_unique<Entity>(container);
@@ -445,7 +445,7 @@ namespace Arkanoid
         RenderWindow window{{windowWidth, windowHeight}, "Arkanoid"};
         FrameTime lastFt{0.f}, currentSlice{0.f};
         bool running{false};
-        Container container;
+        EntityContainer container;
 
         Game()
         {
@@ -505,6 +505,7 @@ namespace Arkanoid
 
             if(Keyboard::isKeyPressed(Keyboard::Key::Escape)) running = false;
         }
+
         void updatePhase()
         {
             currentSlice += lastFt;
@@ -519,12 +520,13 @@ namespace Arkanoid
 
                 for(auto& b : balls)
                 {
-                    for(auto& p : paddles) testCollisionPB(*p, *b);
+                    for(auto& p : paddles) testCollisionPaddleBall(*p, *b);
 
-                    for(auto& br : bricks) testCollisionBB(*br, *b);
+                    for(auto& br : bricks) testCollisionBrickBall(*br, *b);
                 }
             }
         }
+
         void drawPhase()
         {
             container.draw(this->window);
