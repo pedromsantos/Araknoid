@@ -5,7 +5,7 @@
 #include <cmath>
 #include <SFML/Graphics.hpp>
 
-namespace CompositionArkanoid
+namespace Arkanoid
 {
     struct Component;
     class Entity;
@@ -537,6 +537,6 @@ namespace CompositionArkanoid
 
 int main()
 {
-    CompositionArkanoid::Game{}.run();
+    Arkanoid::Game{}.run();
     return 0;
 }
