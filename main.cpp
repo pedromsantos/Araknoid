@@ -55,12 +55,10 @@ namespace Arkanoid
     {
     private:
         EntityContainer& container;
-
         bool alive{true};
         std::vector<std::unique_ptr<Component>> components;
         ComponentArray componentArray;
         ComponentBitset componentBitset;
-
         GroupBitset groupBitset;
 
     public:
@@ -215,10 +213,6 @@ namespace Arkanoid
 
         CPhysics(const Vector2f& mHalfSize) : halfSize{mHalfSize} {}
 
-        void init() override
-        {
-        }
-
         CPosition* Position() const
         {
             return &entity->getComponent<CPosition>();
@@ -314,10 +308,6 @@ namespace Arkanoid
 
     struct CPaddleControl : Component
     {
-        void init() override
-        {
-        }
-
         CPhysics* Physics() const
         {
             return &entity->getComponent<CPhysics>();
