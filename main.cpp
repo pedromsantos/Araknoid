@@ -9,7 +9,7 @@ namespace Arkanoid
 {
     struct Component;
     class Entity;
-    class Manager;
+    class Container;
 
     using ComponentID = std::size_t;
     using Group = std::size_t;
@@ -54,7 +54,7 @@ namespace Arkanoid
     class Entity
     {
     private:
-        Manager& manager;
+        Container& container;
 
         bool alive{true};
         std::vector<std::unique_ptr<Component>> components;
@@ -64,7 +64,7 @@ namespace Arkanoid
         GroupBitset groupBitset;
 
     public:
-        Entity(Manager& mManager) : manager(mManager) {}
+        Entity(Container& container) : container(container) {}
 
         void update(float mFT)
         {
@@ -119,7 +119,7 @@ namespace Arkanoid
         }
     };
 
-    struct Manager
+    struct Container
     {
     private:
         std::vector<std::unique_ptr<Entity>> entities;
@@ -178,7 +178,7 @@ namespace Arkanoid
     void Entity::addGroup(Group mGroup) noexcept
     {
         groupBitset[mGroup] = true;
-        manager.addToGroup(this, mGroup);
+        container.addToGroup(this, mGroup);
     }
 
     using namespace std;
@@ -376,9 +376,9 @@ namespace Arkanoid
 
     struct BallFactory
     {
-        static void create(Manager& manager)
+        static void create(Container& container)
         {
-            auto entity = std::make_unique<Entity>(manager);
+            auto entity = std::make_unique<Entity>(container);
 
             entity->addComponent<CPosition>(
                     Vector2f{windowWidth / 2.f, windowHeight / 2.f});
@@ -400,16 +400,16 @@ namespace Arkanoid
 
             entity->addGroup(ArkanoidGroup::GBall);
 
-            manager.addEntity(std::move(entity));
+            container.addEntity(std::move(entity));
         }
     };
 
     struct BrickFactory
     {
-        static void create(Manager& manager, const Vector2f& mPosition)
+        static void create(Container& container, const Vector2f& mPosition)
         {
             Vector2f halfSize{blockWidth / 2.f, blockHeight / 2.f};
-            auto entity = std::make_unique<Entity>(manager);
+            auto entity = std::make_unique<Entity>(container);
 
             entity->addComponent<CPosition>(mPosition);
             entity->addComponent<CPhysics>(halfSize);
@@ -417,16 +417,16 @@ namespace Arkanoid
 
             entity->addGroup(ArkanoidGroup::GBrick);
 
-            manager.addEntity(std::move(entity));
+            container.addEntity(std::move(entity));
         }
     };
 
     struct PaddleFactory
     {
-        static void create(Manager& manager)
+        static void create(Container& container)
         {
             Vector2f halfSize{paddleWidth / 2.f, paddleHeight / 2.f};
-            auto entity = std::make_unique<Entity>(manager);
+            auto entity = std::make_unique<Entity>(container);
 
             entity->addComponent<CPosition>(
                     Vector2f{windowWidth / 2.f, windowHeight - 60.f});
@@ -436,7 +436,7 @@ namespace Arkanoid
 
             entity->addGroup(ArkanoidGroup::GPaddle);
 
-            manager.addEntity(std::move(entity));
+            container.addEntity(std::move(entity));
         }
     };
 
@@ -445,14 +445,14 @@ namespace Arkanoid
         RenderWindow window{{windowWidth, windowHeight}, "Arkanoid"};
         FrameTime lastFt{0.f}, currentSlice{0.f};
         bool running{false};
-        Manager manager;
+        Container container;
 
         Game()
         {
             window.setFramerateLimit(240);
 
-            PaddleFactory::create(manager);
-            BallFactory::create(manager);
+            PaddleFactory::create(container);
+            BallFactory::create(container);
 
             for(int iX{0}; iX < countBlocksX; ++iX)
             {
@@ -461,7 +461,7 @@ namespace Arkanoid
                     auto position = Vector2f{(iX + 1) * (blockWidth + 3) + 22,
                                              (iY + 2) * (blockHeight + 3)};
 
-                    BrickFactory::create(manager, position);
+                    BrickFactory::create(container, position);
                 }
             }
         }
@@ -510,12 +510,12 @@ namespace Arkanoid
             currentSlice += lastFt;
             for(; currentSlice >= ftSlice; currentSlice -= ftSlice)
             {
-                manager.refresh();
-                manager.update(ftStep);
+                container.refresh();
+                container.update(ftStep);
 
-                auto& paddles(manager.getEntitiesByGroup(GPaddle));
-                auto& bricks(manager.getEntitiesByGroup(GBrick));
-                auto& balls(manager.getEntitiesByGroup(GBall));
+                auto& paddles(container.getEntitiesByGroup(GPaddle));
+                auto& bricks(container.getEntitiesByGroup(GBrick));
+                auto& balls(container.getEntitiesByGroup(GBall));
 
                 for(auto& b : balls)
                 {
@@ -527,7 +527,7 @@ namespace Arkanoid
         }
         void drawPhase()
         {
-            manager.draw(this->window);
+            container.draw(this->window);
             window.display();
         }
     };
