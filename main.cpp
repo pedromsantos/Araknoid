@@ -186,7 +186,7 @@ namespace Arkanoid
     using FrameTime = float;
 
     constexpr int windowWidth{800}, windowHeight{600};
-    constexpr float ballRadius{10.f}, ballVelocity{0.8f};
+    constexpr float ballRadius{10.f}, ballVelocity{0.6f};
     constexpr float paddleWidth{60.f}, paddleHeight{20.f}, paddleVelocity{0.6f};
     constexpr float blockWidth{60.f}, blockHeight{20.f};
     constexpr int countBlocksX{11}, countBlocksY{4};
@@ -278,17 +278,16 @@ namespace Arkanoid
         RectangleShape shape;
         Vector2f size;
 
-        CRectangle(const Vector2f& mHalfSize)
+        CRectangle(const Vector2f& mHalfSize, sf::Color color)
                 : size{mHalfSize * 2.f}
         {
+            shape.setFillColor(color);
         }
 
         void init() override
         {
             cPosition = &entity->getComponent<CPosition>();
-
             shape.setSize(size);
-            shape.setFillColor(Color::Red);
             shape.setOrigin(size.x / 2.f, size.y / 2.f);
         }
 
@@ -414,7 +413,7 @@ namespace Arkanoid
 
             entity->addComponent<CPosition>(mPosition);
             entity->addComponent<CPhysics>(halfSize);
-            entity->addComponent<CRectangle>(halfSize);
+            entity->addComponent<CRectangle>(halfSize, sf::Color::Yellow);
 
             entity->addGroup(ArkanoidGroup::GBrick);
 
@@ -432,7 +431,7 @@ namespace Arkanoid
             entity->addComponent<CPosition>(
                     Vector2f{windowWidth / 2.f, windowHeight - 60.f});
             entity->addComponent<CPhysics>(halfSize);
-            entity->addComponent<CRectangle>(halfSize);
+            entity->addComponent<CRectangle>(halfSize, sf::Color::Red);
             entity->addComponent<CPaddleControl>();
 
             entity->addGroup(ArkanoidGroup::GPaddle);
