@@ -442,8 +442,7 @@ namespace Arkanoid
 
     struct Game
     {
-        RenderWindow window{
-                {windowWidth, windowHeight}, "Arkanoid - Components"};
+        RenderWindow window{{windowWidth, windowHeight}, "Arkanoid"};
         FrameTime lastFt{0.f}, currentSlice{0.f};
         bool running{false};
         Manager manager;
@@ -489,12 +488,6 @@ namespace Arkanoid
                                 .count()};
 
                 lastFt = ft;
-
-                auto ftSeconds(ft / 1000.f);
-                auto fps(1.f / ftSeconds);
-
-                window.setTitle(
-                        "FT: " + to_string(ft) + "\tFPS: " + to_string(fps));
             }
         }
 
