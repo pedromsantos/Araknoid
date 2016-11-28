@@ -8,6 +8,9 @@ namespace Arkanoid
 {
     struct Component
     {
+	    virtual ~Component()
+	    {
+	    }
     };
 
     struct Position : Component
@@ -27,12 +30,13 @@ namespace Arkanoid
         Velocity(const sf::Vector2f& velocity) : velocity{velocity} {}
     };
 
-    struct Dispaly : Component
+    struct Drawable : Component
     {
         virtual sf::CircleShape Shape() const = 0;
+		virtual void ChangePosition(sf::Vector2f position) = 0;
     };
 
-    struct Circle : Dispaly
+    struct Circle : Drawable
     {
         sf::CircleShape shape;
 
@@ -47,6 +51,11 @@ namespace Arkanoid
         {
             return this->shape;
         }
+
+		void ChangePosition(sf::Vector2f position) override
+        {
+			shape.setPosition(position);
+        }
     };
 
     struct Node
@@ -55,8 +64,13 @@ namespace Arkanoid
 
     struct Render : Node
     {
-        std::shared_ptr<Dispaly> display;
+        std::shared_ptr<Drawable> display;
         std::shared_ptr<Position> position;
+
+		void Update() const
+		{
+			display->ChangePosition(position->position);
+		}
     };
 
     struct Move : Node
@@ -86,6 +100,7 @@ namespace Arkanoid
         void Update(sf::RenderWindow& window) const
         {
             window.clear(sf::Color::Black);
+			
             auto shape = render->display->Shape();
 
             window.draw(shape);
@@ -148,6 +163,7 @@ int main()
             }
         }
 
+		render->Update();
         renderer.Update(window);
     }
 
