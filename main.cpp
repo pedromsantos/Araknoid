@@ -36,22 +36,22 @@ namespace Arkanoid
 
 		void AccelerateLeft()
 		{
-			this->velocity.x = -this->velocity.x;
+			this->velocity.x = -ballSpeed;
 		}
 
 		void AccelerateRight()
 		{
-			this->velocity.x = this->velocity.x;
+			this->velocity.x = ballSpeed;
 		}
 
 		void AccelerateUp()
 		{
-			this->velocity.y = -this->velocity.y;
+			this->velocity.y = -ballSpeed;
 		}
 
 		void AccelerateDown()
 		{
-			this->velocity.y = this->velocity.y;
+			this->velocity.y = ballSpeed;
 		}
 
 		float HorizontalSpeed() const noexcept { return velocity.x; }
