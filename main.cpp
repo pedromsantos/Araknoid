@@ -36,12 +36,12 @@ namespace Arkanoid
 
 		void AccelerateLeft()
 		{
-			this->velocity.x = this->velocity.x;
+			this->velocity.x = -this->velocity.x;
 		}
 
 		void AccelerateRight()
 		{
-			this->velocity.x = -this->velocity.x;
+			this->velocity.x = this->velocity.x;
 		}
 
 		void AccelerateUp()
@@ -130,6 +130,18 @@ namespace Arkanoid
     {
 		std::shared_ptr<Drawable> drawable;
         std::shared_ptr<Velocity> velocity;
+
+		void Update() const
+		{
+			drawable->Move(velocity->velocity);
+		}
+
+		float x() const noexcept { return drawable->x(); }
+		float y() const noexcept { return drawable->y(); }
+		float left() const noexcept { return drawable->left(); }
+		float right() const noexcept { return drawable->right(); }
+		float top() const noexcept { return drawable->top(); }
+		float bottom() const noexcept { return drawable->bottom(); }
     };
 
     struct System
@@ -154,27 +166,25 @@ namespace Arkanoid
 	{
 		void Update() const override
 		{
-			auto velocity = sf::Vector2f{ move->velocity->HorizontalSpeed(), move->velocity->VerticalSpeed() };
-
-			if (move->drawable->left() < 0)
+			if (move->left() < 0)
 			{
 				move->velocity->AccelerateRight();
 			}
-			else if (move->drawable->right() > windowWidth)
+			else if (move->right() > windowWidth)
 			{
 				move->velocity->AccelerateLeft();
 			}
 
-			if (move->drawable->top() < 0)
+			if (move->top() < 0)
 			{
 				move->velocity->AccelerateDown();
 			}
-			else if (move->drawable->bottom() > windowHeight)
+			else if (move->bottom() > windowHeight)
 			{
 				move->velocity->AccelerateUp();
 			}
 
-			move->drawable->Move(velocity);
+			move->Update();
 		}
 	};
 
