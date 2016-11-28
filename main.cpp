@@ -34,6 +34,26 @@ namespace Arkanoid
 			this->velocity = velocity;
 		}
 
+		void AccelerateLeft()
+		{
+			this->velocity.x = this->velocity.x;
+		}
+
+		void AccelerateRight()
+		{
+			this->velocity.x = -this->velocity.x;
+		}
+
+		void AccelerateUp()
+		{
+			this->velocity.y = -this->velocity.y;
+		}
+
+		void AccelerateDown()
+		{
+			this->velocity.y = this->velocity.y;
+		}
+
 		float HorizontalSpeed() const noexcept { return velocity.x; }
 		float VerticalSpeed() const noexcept { return velocity.y; }
     };
@@ -43,6 +63,13 @@ namespace Arkanoid
         virtual sf::CircleShape Shape() const = 0;
 		virtual void ChangePosition(sf::Vector2f& position) = 0;
 		virtual void Move(sf::Vector2f& velocity) = 0;
+
+		virtual float x() const noexcept = 0;
+		virtual float y() const noexcept = 0;
+		virtual float left() const noexcept = 0;
+		virtual float right() const noexcept = 0;
+		virtual float top() const noexcept = 0;
+		virtual float bottom() const noexcept = 0;
     };
 
     struct Circle : Drawable
@@ -70,6 +97,13 @@ namespace Arkanoid
 		{
 			shape.move(velocity);
 		}
+
+		float x() const noexcept override { return shape.getPosition().x; }
+		float y() const noexcept override { return shape.getPosition().y; }
+		float left() const noexcept override { return x() - shape.getRadius(); }
+		float right() const noexcept override { return x() + shape.getRadius(); }
+		float top() const noexcept override { return y() - shape.getRadius(); }
+		float bottom() const noexcept override { return y() + shape.getRadius(); }
     };
 
     struct Node
@@ -100,17 +134,49 @@ namespace Arkanoid
 
     struct System
     {
+	    virtual ~System()
+	    {
+	    }
     };
 
     struct Mover : System
     {
         std::shared_ptr<Move> move;
 
-		void Update() const
+		virtual void Update() const
 		{
-			move->drawable->Move(sf::Vector2f{move->velocity->HorizontalSpeed(), move->velocity->VerticalSpeed()});
+			auto velocity = sf::Vector2f{move->velocity->HorizontalSpeed(), move->velocity->VerticalSpeed()};
+			move->drawable->Move(velocity);
 		}
     };
+
+	struct BounceOnEdgesMover : Mover
+	{
+		void Update() const override
+		{
+			auto velocity = sf::Vector2f{ move->velocity->HorizontalSpeed(), move->velocity->VerticalSpeed() };
+
+			if (move->drawable->left() < 0)
+			{
+				move->velocity->AccelerateRight();
+			}
+			else if (move->drawable->right() > windowWidth)
+			{
+				move->velocity->AccelerateLeft();
+			}
+
+			if (move->drawable->top() < 0)
+			{
+				move->velocity->AccelerateDown();
+			}
+			else if (move->drawable->bottom() > windowHeight)
+			{
+				move->velocity->AccelerateUp();
+			}
+
+			move->drawable->Move(velocity);
+		}
+	};
 
     struct Renderer : System
     {
@@ -154,7 +220,7 @@ namespace Arkanoid
 			move->drawable = drawable;
 			move->velocity = velocity;
 
-			auto mover = std::make_shared<Arkanoid::Mover>();
+			auto mover = std::make_shared<Arkanoid::BounceOnEdgesMover>();
 			mover->move = move;
 
 			return mover;
@@ -192,7 +258,6 @@ int main()
 	auto renderer = Arkanoid::RendererFactory::Create(circle, position, window);
 	auto mover = Arkanoid::MoverFactory::Create(circle, velocity);
 
-	// Entities
 	auto ball = Arkanoid::Ball();
 	ball.position = position;
 	ball.circle = circle;
