@@ -1,6 +1,7 @@
+#include <memory>
 #include <SFML/Graphics.hpp>
 
-constexpr int windowWidth{800}, windowHeight{600};
+constexpr unsigned int windowWidth{800}, windowHeight{600};
 constexpr float ballRadius{10.f};
 
 namespace Arkanoid
