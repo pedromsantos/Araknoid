@@ -8,3 +8,6 @@ Debug/
 .vs/
 Arkanoid.sdf
 Arkanoid.VC.opendb
+Makefile
+*.cmake
+CMakeCache.txt

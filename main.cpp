@@ -195,25 +195,25 @@ namespace Arkanoid
 	{
 		void Update() const override
 		{
-			if (move->left() < 0)
+			if (this->move->left() < 0)
 			{
-				move->velocity->Right();
+                this->move->velocity->Right();
 			}
-			else if (move->right() > windowWidth)
+			else if (this->move->right() > windowWidth)
 			{
-				move->velocity->Left();
-			}
-
-			if (move->top() < 0)
-			{
-				move->velocity->Backward();
-			}
-			else if (move->bottom() > windowHeight)
-			{
-				move->velocity->Forward();
+                this->move->velocity->Left();
 			}
 
-			move->Update();
+			if (this->move->top() < 0)
+			{
+                this->move->velocity->Backward();
+			}
+			else if (this->move->bottom() > windowHeight)
+			{
+                this->move->velocity->Forward();
+			}
+
+            this->move->Update();
 		}
 	};
 
