@@ -59,8 +59,14 @@ namespace Arkanoid
 		float VerticalSpeed() const noexcept { return velocity.y; }
     };
 
+	struct Element : Component
+	{
+		virtual void ChangePosition(sf::Vector2f& position) = 0;
+		virtual void Draw(sf::RenderWindow& window) const noexcept = 0;
+	};
+
 	template<class T>
-    struct Drawable : Component
+    struct Drawable : Element
     {
 		T shape;
 
@@ -69,8 +75,20 @@ namespace Arkanoid
 			return this->shape;
 		}
 
-		virtual void ChangePosition(sf::Vector2f& position) = 0;
-		virtual void Move(sf::Vector2f& velocity) = 0;
+		void Draw(sf::RenderWindow& window) const noexcept override
+		{
+			window.draw(shape);
+		}
+
+		void ChangePosition(sf::Vector2f& position) override
+		{
+			shape.setPosition(position);
+		}
+
+		void Move(sf::Vector2f& velocity)
+		{
+			shape.move(velocity);
+		}
 
 		virtual float x() const noexcept = 0;
 		virtual float y() const noexcept = 0;
@@ -88,16 +106,6 @@ namespace Arkanoid
             shape.setFillColor(color);
             shape.setOrigin(radius, radius);
         }
-		
-    	void ChangePosition(sf::Vector2f& position) override
-        {
-			shape.setPosition(position);
-        }
-
-		void Move(sf::Vector2f& velocity) override
-		{
-			shape.move(velocity);
-		}
 
 		float x() const noexcept override { return shape.getPosition().x; }
 		float y() const noexcept override { return shape.getPosition().y; }
@@ -115,16 +123,6 @@ namespace Arkanoid
 			shape.setFillColor(color);
 			shape.setOrigin(width / 2.f, height / 2.f);
 		}
-		
-		void ChangePosition(sf::Vector2f& position) override
-		{
-			shape.setPosition(position);
-		}
-
-		void Move(sf::Vector2f& velocity) override
-		{
-			shape.move(velocity);
-		}
 
 		float x() const noexcept override { return shape.getPosition().x; }
 		float y() const noexcept override { return shape.getPosition().y; }
@@ -138,10 +136,9 @@ namespace Arkanoid
     {
     };
 
-	template<class T>
     struct Render : Node
     {
-        std::shared_ptr<Drawable<T>> drawable;
+        std::shared_ptr<Element> drawable;
         std::shared_ptr<Position> position;
 
 		void Update() const
@@ -149,9 +146,9 @@ namespace Arkanoid
 			drawable->ChangePosition(position->position);
 		}
 
-		sf::CircleShape Shape() const
+		void Draw(sf::RenderWindow& window) const
 		{
-			return this->drawable->Shape();
+			drawable->Draw(window);
 		}
     };
 
@@ -220,10 +217,9 @@ namespace Arkanoid
 		}
 	};
 
-	template<class T>
     struct Renderer : System
     {
-        std::shared_ptr<Render<T>> render;
+        std::vector<std::shared_ptr<Render>> renders;
 
         Renderer(sf::RenderWindow& window)
         {
@@ -233,8 +229,18 @@ namespace Arkanoid
         void Update(sf::RenderWindow& window) const
         {
             window.clear(sf::Color::Black);
-	        window.draw(render->Shape());
-            window.display();
+
+			for (auto render : renders)
+			{
+				render->Draw(window);
+			}
+
+        	window.display();
+        }
+
+	    void Add(const std::shared_ptr<Render>& render)
+        {
+			renders.push_back(render);
         }
     };
 
@@ -271,20 +277,29 @@ namespace Arkanoid
 		}
 	};
 
-	template<class T>
-	struct RendererFactory
+	struct RendererBuilder
 	{
-		static std::shared_ptr<Renderer<T>> Create(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Position>& position, sf::RenderWindow& window)
+		std::shared_ptr<Arkanoid::Renderer> renderer;
+
+		RendererBuilder(sf::RenderWindow& window)
 		{
-			auto render = std::make_shared<Arkanoid::Render<T>>();
+			renderer = std::make_shared<Arkanoid::Renderer>(window);
+		}
+
+		RendererBuilder* AddRender(std::shared_ptr<Element> drawable, std::shared_ptr<Position>& position)
+		{
+			auto render = std::make_shared<Arkanoid::Render>();
 			render->drawable = drawable;
 			render->position = position;
 
-			auto renderer = std::make_shared<Arkanoid::Renderer<T>>(window);
-			renderer->render = render;
-
 			render->Update();
+			renderer->Add(render);
 
+			return this;
+		}
+
+		std::shared_ptr<Arkanoid::Renderer> Create() const
+		{
 			return renderer;
 		}
 	};
@@ -299,13 +314,23 @@ int main()
 	auto circle = std::make_shared<Arkanoid::Circle>(ballRadius, sf::Color::Red);
 	auto position = std::make_shared<Arkanoid::Position>(ballPosition);
 	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity);
+	
+	sf::Vector2f paddleDefaultpPosition{ windowWidth / 2, windowHeight - 50 };
 
-	auto ballRenderer = Arkanoid::RendererFactory<sf::CircleShape>::Create(circle, position, window);
+	auto rectangle = std::make_shared<Arkanoid::Rectangle>(paddleWidth, paddleHeight, sf::Color::Green);
+	auto paddlePosition = std::make_shared<Arkanoid::Position>(paddleDefaultpPosition);
+
+	auto rendererBuilder = Arkanoid::RendererBuilder(window);
+	rendererBuilder.AddRender(circle, position);
+	rendererBuilder.AddRender(rectangle, paddlePosition);
+
+	auto renderer = rendererBuilder.Create();
+
 	auto ballMover = Arkanoid::MoverFactory<sf::CircleShape>::Create(circle, velocity);
 
-	auto ball = Arkanoid::Ball();
-	ball.position = position;
-	ball.circle = circle;
+	//auto ball = Arkanoid::Ball();
+	//ball.position = position;
+	//ball.circle = circle;
 
     while(window.isOpen())
     {
@@ -326,7 +351,7 @@ int main()
         }
 
 		ballMover->Update();
-        ballRenderer->Update(window);
+        renderer->Update(window);
     }
 
     return 0;
