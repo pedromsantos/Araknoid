@@ -1,6 +1,7 @@
 #include <memory>
 #include <SFML/Graphics.hpp>
 
+constexpr float paddleWidth{ 60.f }, paddleHeight{ 20.f }, paddleVelocity{ 6.f };
 constexpr unsigned int windowWidth{800}, windowHeight{600};
 constexpr float ballRadius{10.f}, ballSpeed{ 8.f };
 
@@ -34,22 +35,22 @@ namespace Arkanoid
 			this->velocity = velocity;
 		}
 
-		void AccelerateLeft()
+		void Left()
 		{
 			this->velocity.x = -ballSpeed;
 		}
 
-		void AccelerateRight()
+		void Right()
 		{
 			this->velocity.x = ballSpeed;
 		}
 
-		void AccelerateUp()
+		void Forward()
 		{
 			this->velocity.y = -ballSpeed;
 		}
 
-		void AccelerateDown()
+		void Backward()
 		{
 			this->velocity.y = ballSpeed;
 		}
@@ -58,9 +59,16 @@ namespace Arkanoid
 		float VerticalSpeed() const noexcept { return velocity.y; }
     };
 
+	template<class T>
     struct Drawable : Component
     {
-        virtual sf::CircleShape Shape() const = 0;
+		T shape;
+
+		T Shape() const
+		{
+			return this->shape;
+		}
+
 		virtual void ChangePosition(sf::Vector2f& position) = 0;
 		virtual void Move(sf::Vector2f& velocity) = 0;
 
@@ -72,23 +80,16 @@ namespace Arkanoid
 		virtual float bottom() const noexcept = 0;
     };
 
-    struct Circle : Drawable
+    struct Circle : Drawable<sf::CircleShape>
     {
-        sf::CircleShape shape;
-
         Circle(float radius, sf::Color color)
         {
             shape.setRadius(radius);
             shape.setFillColor(color);
             shape.setOrigin(radius, radius);
         }
-
-        sf::CircleShape Shape() const override
-        {
-            return this->shape;
-        }
-
-		void ChangePosition(sf::Vector2f& position) override
+		
+    	void ChangePosition(sf::Vector2f& position) override
         {
 			shape.setPosition(position);
         }
@@ -105,14 +106,42 @@ namespace Arkanoid
 		float top() const noexcept override { return y() - shape.getRadius(); }
 		float bottom() const noexcept override { return y() + shape.getRadius(); }
     };
+	
+	struct Rectangle : Drawable<sf::RectangleShape>
+	{
+		Rectangle(float width, float height, sf::Color color)
+		{
+			shape.setSize(sf::Vector2f(width, height));
+			shape.setFillColor(color);
+			shape.setOrigin(width / 2.f, height / 2.f);
+		}
+		
+		void ChangePosition(sf::Vector2f& position) override
+		{
+			shape.setPosition(position);
+		}
+
+		void Move(sf::Vector2f& velocity) override
+		{
+			shape.move(velocity);
+		}
+
+		float x() const noexcept override { return shape.getPosition().x; }
+		float y() const noexcept override { return shape.getPosition().y; }
+		float left() const noexcept override { return x() - shape.getSize().x / 2.f; }
+		float right() const noexcept override { return x() + shape.getSize().x / 2.f; }
+		float top() const noexcept override { return y() - shape.getSize().y / 2.f; }
+		float bottom() const noexcept override { return y() + shape.getSize().y / 2.f; }
+	};
 
     struct Node
     {
     };
 
+	template<class T>
     struct Render : Node
     {
-        std::shared_ptr<Drawable> drawable;
+        std::shared_ptr<Drawable<T>> drawable;
         std::shared_ptr<Position> position;
 
 		void Update() const
@@ -126,9 +155,10 @@ namespace Arkanoid
 		}
     };
 
+	template<class T>
     struct Move : Node
     {
-		std::shared_ptr<Drawable> drawable;
+		std::shared_ptr<Drawable<T>> drawable;
         std::shared_ptr<Velocity> velocity;
 
 		void Update() const
@@ -151,9 +181,10 @@ namespace Arkanoid
 	    }
     };
 
+	template<class T>
     struct Mover : System
     {
-        std::shared_ptr<Move> move;
+        std::shared_ptr<Move<T>> move;
 
 		virtual void Update() const
 		{
@@ -162,35 +193,37 @@ namespace Arkanoid
 		}
     };
 
-	struct BounceOnEdgesMover : Mover
+	template<class T>
+	struct BounceOnEdgesMover : Mover<T>
 	{
 		void Update() const override
 		{
 			if (move->left() < 0)
 			{
-				move->velocity->AccelerateRight();
+				move->velocity->Right();
 			}
 			else if (move->right() > windowWidth)
 			{
-				move->velocity->AccelerateLeft();
+				move->velocity->Left();
 			}
 
 			if (move->top() < 0)
 			{
-				move->velocity->AccelerateDown();
+				move->velocity->Backward();
 			}
 			else if (move->bottom() > windowHeight)
 			{
-				move->velocity->AccelerateUp();
+				move->velocity->Forward();
 			}
 
 			move->Update();
 		}
 	};
 
+	template<class T>
     struct Renderer : System
     {
-        std::shared_ptr<Render> render;
+        std::shared_ptr<Render<T>> render;
 
         Renderer(sf::RenderWindow& window)
         {
@@ -222,30 +255,32 @@ namespace Arkanoid
         }
     };
 
+	template<class T>
 	struct MoverFactory
 	{
-		static std::shared_ptr<Mover> Create(const std::shared_ptr<Drawable>& drawable, std::shared_ptr<Velocity>& velocity)
+		static std::shared_ptr<Mover<T>> Create(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Velocity>& velocity)
 		{
-			auto move = std::make_shared<Arkanoid::Move>();
+			auto move = std::make_shared<Arkanoid::Move<T>>();
 			move->drawable = drawable;
 			move->velocity = velocity;
 
-			auto mover = std::make_shared<Arkanoid::BounceOnEdgesMover>();
+			auto mover = std::make_shared<Arkanoid::BounceOnEdgesMover<T>>();
 			mover->move = move;
 
 			return mover;
 		}
 	};
 
+	template<class T>
 	struct RendererFactory
 	{
-		static std::shared_ptr<Renderer> Create(const std::shared_ptr<Drawable>& drawable, std::shared_ptr<Position>& position, sf::RenderWindow& window)
+		static std::shared_ptr<Renderer<T>> Create(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Position>& position, sf::RenderWindow& window)
 		{
-			auto render = std::make_shared<Arkanoid::Render>();
+			auto render = std::make_shared<Arkanoid::Render<T>>();
 			render->drawable = drawable;
 			render->position = position;
 
-			auto renderer = std::make_shared<Arkanoid::Renderer>(window);
+			auto renderer = std::make_shared<Arkanoid::Renderer<T>>(window);
 			renderer->render = render;
 
 			render->Update();
@@ -265,8 +300,8 @@ int main()
 	auto position = std::make_shared<Arkanoid::Position>(ballPosition);
 	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity);
 
-	auto renderer = Arkanoid::RendererFactory::Create(circle, position, window);
-	auto mover = Arkanoid::MoverFactory::Create(circle, velocity);
+	auto ballRenderer = Arkanoid::RendererFactory<sf::CircleShape>::Create(circle, position, window);
+	auto ballMover = Arkanoid::MoverFactory<sf::CircleShape>::Create(circle, velocity);
 
 	auto ball = Arkanoid::Ball();
 	ball.position = position;
@@ -290,8 +325,8 @@ int main()
             }
         }
 
-		mover->Update();
-        renderer->Update(window);
+		ballMover->Update();
+        ballRenderer->Update(window);
     }
 
     return 0;
