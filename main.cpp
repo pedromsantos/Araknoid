@@ -163,6 +163,26 @@ namespace Arkanoid
 			drawable->Move(velocity->velocity);
 		}
 
+		void Left()
+		{
+			this->velocity->Left();
+		}
+
+		void Right()
+		{
+			this->velocity->Right();
+		}
+
+		void Forward()
+		{
+			this->velocity->Forward();
+		}
+
+		void Backward()
+		{
+			this->velocity->Backward();
+		}
+
 		float x() const noexcept { return drawable->x(); }
 		float y() const noexcept { return drawable->y(); }
 		float left() const noexcept { return drawable->left(); }
@@ -191,26 +211,52 @@ namespace Arkanoid
     };
 
 	template<class T>
+	struct StopOnEdgesMover : System
+	{
+		std::shared_ptr<Move<T>> move;
+
+		virtual void Update() const
+		{
+			if (this->move->left() > 0)
+			{
+				this->move->Left();
+			}
+			else if (this->move->right() < windowWidth)
+			{
+				this->move->Right();
+			}
+			if (this->move->top() > 0)
+			{
+				this->move->Forward();
+			}
+			else if (this->move->bottom() < windowHeight)
+			{
+				this->move->Backward();
+			}
+		}
+	};
+
+	template<class T>
 	struct BounceOnEdgesMover : Mover<T>
 	{
 		void Update() const override
 		{
 			if (this->move->left() < 0)
 			{
-                this->move->velocity->Right();
+                this->move->Right();
 			}
 			else if (this->move->right() > windowWidth)
 			{
-                this->move->velocity->Left();
+                this->move->Left();
 			}
 
 			if (this->move->top() < 0)
 			{
-                this->move->velocity->Backward();
+                this->move->Backward();
 			}
 			else if (this->move->bottom() > windowHeight)
 			{
-                this->move->velocity->Forward();
+                this->move->Forward();
 			}
 
             this->move->Update();
