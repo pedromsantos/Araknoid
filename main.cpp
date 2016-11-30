@@ -1,7 +1,7 @@
 #include <memory>
 #include <SFML/Graphics.hpp>
 
-constexpr float paddleWidth{ 60.f }, paddleHeight{ 20.f }, paddleVelocity{ 6.f };
+constexpr float paddleWidth{ 60.f }, paddleHeight{ 20.f }, paddleSpeed{ 6.f };
 constexpr unsigned int windowWidth{800}, windowHeight{600};
 constexpr float ballRadius{10.f}, ballSpeed{ 8.f };
 
@@ -56,18 +56,36 @@ namespace Arkanoid
 			this->velocity.y = speed;
 		}
 
+		void Stop()
+		{
+			this->velocity.x = 0;
+			this->velocity.y = 0;
+		}
+
+		void Accelerate(float speed)
+		{
+			this->speed = speed;
+		}
+
 		float HorizontalSpeed() const noexcept { return velocity.x; }
 		float VerticalSpeed() const noexcept { return velocity.y; }
     };
 
-	struct Element : Component
+	struct Body : Component
 	{
 		virtual void ChangePosition(sf::Vector2f& position) = 0;
 		virtual void Draw(sf::RenderWindow& window) const noexcept = 0;
+
+		virtual float x() const noexcept = 0;
+		virtual float y() const noexcept = 0;
+		virtual float left() const noexcept = 0;
+		virtual float right() const noexcept = 0;
+		virtual float top() const noexcept = 0;
+		virtual float bottom() const noexcept = 0;
 	};
 
 	template<class T>
-    struct Drawable : Element
+    struct Drawable : Body
     {
 		T shape;
 
@@ -90,13 +108,6 @@ namespace Arkanoid
 		{
 			shape.move(velocity);
 		}
-
-		virtual float x() const noexcept = 0;
-		virtual float y() const noexcept = 0;
-		virtual float left() const noexcept = 0;
-		virtual float right() const noexcept = 0;
-		virtual float top() const noexcept = 0;
-		virtual float bottom() const noexcept = 0;
     };
 
     struct Circle : Drawable<sf::CircleShape>
@@ -135,11 +146,14 @@ namespace Arkanoid
 
     struct Node
     {
+	    virtual ~Node()
+	    {
+	    }
     };
 
     struct Render : Node
     {
-        std::shared_ptr<Element> drawable;
+        std::shared_ptr<Body> drawable;
         std::shared_ptr<Position> position;
 
 		void Update() const
@@ -164,24 +178,34 @@ namespace Arkanoid
 			drawable->Move(velocity->velocity);
 		}
 
-		void Left()
+		virtual void Left()
 		{
 			this->velocity->Left();
 		}
 
-		void Right()
+		virtual void Right()
 		{
 			this->velocity->Right();
 		}
 
-		void Forward()
+		virtual void Forward()
 		{
 			this->velocity->Forward();
 		}
 
-		void Backward()
+		virtual void Backward()
 		{
 			this->velocity->Backward();
+		}
+
+		virtual void Stop()
+		{
+			this->velocity->Stop();
+		}
+
+		void Accelerate(float speed)
+		{
+			this->velocity->Accelerate(speed);
 		}
 
 		float x() const noexcept { return drawable->x(); }
@@ -192,8 +216,56 @@ namespace Arkanoid
 		float bottom() const noexcept { return drawable->bottom(); }
     };
 
+	template<class T>
+	struct BoundedMove : Move<T>
+	{
+		int top, bottom, left, right;
+
+		BoundedMove(int top, int bottom, int left, int right)
+		{
+			this->top = top;
+			this->bottom = bottom;
+			this->left = left;
+			this->right = right;
+		}
+
+		void Left() override
+		{
+			if (Move<T>::left() > left)
+			{
+				Move<T>::Left();
+			}
+		}
+
+		void Right() override
+		{
+			if (Move<T>::right() < right)
+			{
+				Move<T>::Right();
+			}
+		}
+
+		void Forward() override
+		{
+			if (Move<T>::top() > top)
+			{
+				Move<T>::Forward();
+			}
+		}
+
+		void Backward() override
+		{
+			if (Move<T>::bottom() < bottom)
+			{
+				Move<T>::Backward();
+			}
+		}
+	};
+
     struct System
     {
+		virtual void Update() const {};
+
 	    virtual ~System()
 	    {
 	    }
@@ -204,7 +276,7 @@ namespace Arkanoid
     {
         std::shared_ptr<Move<T>> move;
 
-		virtual void Update() const
+	    void Update() const override
 		{
 			auto velocity = sf::Vector2f{move->velocity->HorizontalSpeed(), move->velocity->VerticalSpeed()};
 			move->drawable->Move(velocity);
@@ -212,28 +284,34 @@ namespace Arkanoid
     };
 
 	template<class T>
-	struct StopOnEdgesMover : System
+	struct MoveOnLeftRightKey : System
 	{
-		std::shared_ptr<Move<T>> move;
+		std::shared_ptr<BoundedMove<T>> move;
+		float speed;
 
-		virtual void Update() const
+		MoveOnLeftRightKey(float speed): speed(speed) 
+		{	
+		}
+
+		void Update() const override
 		{
-			if (this->move->left() > 0)
+			move->Stop();
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
 			{
-				this->move->Left();
+				move->Accelerate(speed);
+				move->Left();
 			}
-			else if (this->move->right() < windowWidth)
+			
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
 			{
-				this->move->Right();
+				move->Accelerate(speed);
+				move->Right();
 			}
-			if (this->move->top() > 0)
-			{
-				this->move->Forward();
-			}
-			else if (this->move->bottom() < windowHeight)
-			{
-				this->move->Backward();
-			}
+
+			this->move->Update();
+
+			move->Stop();
 		}
 	};
 
@@ -291,6 +369,11 @@ namespace Arkanoid
         }
     };
 
+	struct Intent : System
+	{
+		
+	};
+
     struct Entity
     {
     };
@@ -311,13 +394,25 @@ namespace Arkanoid
 	template<class T>
 	struct MoverFactory
 	{
-		static std::shared_ptr<Mover<T>> Create(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Velocity>& velocity)
+		static std::shared_ptr<System> Create(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Velocity>& velocity)
 		{
 			auto move = std::make_shared<Arkanoid::Move<T>>();
 			move->drawable = drawable;
 			move->velocity = velocity;
 
 			auto mover = std::make_shared<Arkanoid::BounceOnEdgesMover<T>>();
+			mover->move = move;
+
+			return mover;
+		}
+
+		static std::shared_ptr<System> CreateKeyBounded(std::shared_ptr<Drawable<T>> drawable, std::shared_ptr<Velocity>& velocity, float speed)
+		{
+			auto move = std::make_shared<Arkanoid::BoundedMove<T>>(0, windowHeight, 0, windowWidth);
+			move->drawable = drawable;
+			move->velocity = velocity;
+
+			auto mover = std::make_shared<Arkanoid::MoveOnLeftRightKey<T>>(speed);
 			mover->move = move;
 
 			return mover;
@@ -333,7 +428,7 @@ namespace Arkanoid
 			renderer = std::make_shared<Arkanoid::Renderer>(window);
 		}
 
-		RendererBuilder* AddRender(std::shared_ptr<Element> drawable, std::shared_ptr<Position>& position)
+		RendererBuilder* AddRender(std::shared_ptr<Body> drawable, std::shared_ptr<Position>& position)
 		{
 			auto render = std::make_shared<Arkanoid::Render>();
 			render->drawable = drawable;
@@ -357,15 +452,17 @@ int main()
     sf::RenderWindow window{{windowWidth, windowHeight}, "Arkanoid"};
 	sf::Vector2f ballPosition{ windowWidth / 2, windowHeight / 2 };
 	sf::Vector2f ballVelocity{ -ballSpeed, -ballSpeed };
+	sf::Vector2f paddleDefaultVelocity{ 0, 0 };
 
 	auto circle = std::make_shared<Arkanoid::Circle>(ballRadius, sf::Color::Red);
 	auto position = std::make_shared<Arkanoid::Position>(ballPosition);
 	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity, ballSpeed);
 	
-	sf::Vector2f paddleDefaultpPosition{ windowWidth / 2, windowHeight - 50 };
+	sf::Vector2f paddleDefaultPosition{ windowWidth / 2, windowHeight - 50 };
 
 	auto rectangle = std::make_shared<Arkanoid::Rectangle>(paddleWidth, paddleHeight, sf::Color::Green);
-	auto paddlePosition = std::make_shared<Arkanoid::Position>(paddleDefaultpPosition);
+	auto paddlePosition = std::make_shared<Arkanoid::Position>(paddleDefaultPosition);
+	auto paddleVelocity = std::make_shared<Arkanoid::Velocity>(paddleDefaultVelocity, paddleSpeed);
 
 	auto rendererBuilder = Arkanoid::RendererBuilder(window);
 	rendererBuilder.AddRender(circle, position);
@@ -374,6 +471,7 @@ int main()
 	auto renderer = rendererBuilder.Create();
 
 	auto ballMover = Arkanoid::MoverFactory<sf::CircleShape>::Create(circle, velocity);
+	auto paddleMover = Arkanoid::MoverFactory<sf::RectangleShape>::CreateKeyBounded(rectangle, paddleVelocity, paddleSpeed);
 
 	//auto ball = Arkanoid::Ball();
 	//ball.position = position;
@@ -398,6 +496,7 @@ int main()
         }
 
 		ballMover->Update();
+		paddleMover->Update();
         renderer->Update(window);
     }
 
