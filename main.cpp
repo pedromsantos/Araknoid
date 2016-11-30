@@ -27,8 +27,9 @@ namespace Arkanoid
     struct Velocity : Component
     {
         sf::Vector2f velocity;
+	    float speed;
 
-        Velocity(const sf::Vector2f& velocity) : velocity{velocity} {}
+	    Velocity(const sf::Vector2f& velocity, float speed) : velocity{velocity}, speed(speed) {}
 
 		void ChangeVelocity(sf::Vector2f& velocity)
 		{
@@ -37,22 +38,22 @@ namespace Arkanoid
 
 		void Left()
 		{
-			this->velocity.x = -ballSpeed;
+			this->velocity.x = -speed;
 		}
 
 		void Right()
 		{
-			this->velocity.x = ballSpeed;
+			this->velocity.x = speed;
 		}
 
 		void Forward()
 		{
-			this->velocity.y = -ballSpeed;
+			this->velocity.y = -speed;
 		}
 
 		void Backward()
 		{
-			this->velocity.y = ballSpeed;
+			this->velocity.y = speed;
 		}
 
 		float HorizontalSpeed() const noexcept { return velocity.x; }
@@ -303,7 +304,7 @@ namespace Arkanoid
         Ball()
         {
             sf::Vector2f ballVelocity{0, 0};
-            velocity = std::make_shared<Velocity>(ballVelocity);
+            velocity = std::make_shared<Velocity>(ballVelocity, ballSpeed);
         }
     };
 
@@ -359,7 +360,7 @@ int main()
 
 	auto circle = std::make_shared<Arkanoid::Circle>(ballRadius, sf::Color::Red);
 	auto position = std::make_shared<Arkanoid::Position>(ballPosition);
-	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity);
+	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity, ballSpeed);
 	
 	sf::Vector2f paddleDefaultpPosition{ windowWidth / 2, windowHeight - 50 };
 
