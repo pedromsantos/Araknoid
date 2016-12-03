@@ -445,33 +445,50 @@ namespace Arkanoid
 			return renderer;
 		}
 	};
+
+	struct BallFactory
+	{
+		auto static create(Arkanoid::RendererBuilder& rendererBuilder)
+		{
+			sf::Vector2f ballPosition{ windowWidth / 2, windowHeight / 2 };
+			sf::Vector2f ballVelocity{ -ballSpeed, -ballSpeed };
+
+			auto circle = std::make_shared<Arkanoid::Circle>(ballRadius, sf::Color::Red);
+			auto position = std::make_shared<Arkanoid::Position>(ballPosition);
+			auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity, ballSpeed);
+
+			rendererBuilder.AddRender(circle, position);
+
+            return MoverFactory<sf::CircleShape>::Create(circle, velocity);
+		}
+	};
+
+	struct PaddleFactory
+	{
+		auto static create(Arkanoid::RendererBuilder& rendererBuilder)
+		{
+			sf::Vector2f paddleDefaultVelocity{ 0, 0 };
+			sf::Vector2f paddleDefaultPosition{ windowWidth / 2, windowHeight - 50 };
+
+			auto rectangle = std::make_shared<Arkanoid::Rectangle>(paddleWidth, paddleHeight, sf::Color::Green);
+			auto paddlePosition = std::make_shared<Arkanoid::Position>(paddleDefaultPosition);
+			auto paddleVelocity = std::make_shared<Arkanoid::Velocity>(paddleDefaultVelocity, paddleSpeed);
+
+			rendererBuilder.AddRender(rectangle, paddlePosition);
+
+            return MoverFactory<sf::RectangleShape>::CreateKeyBounded(rectangle, paddleVelocity, paddleSpeed);
+		}
+	};
 }
 
 int main()
 {
     sf::RenderWindow window{{windowWidth, windowHeight}, "Arkanoid"};
-	sf::Vector2f ballPosition{ windowWidth / 2, windowHeight / 2 };
-	sf::Vector2f ballVelocity{ -ballSpeed, -ballSpeed };
-	sf::Vector2f paddleDefaultVelocity{ 0, 0 };
-
-	auto circle = std::make_shared<Arkanoid::Circle>(ballRadius, sf::Color::Red);
-	auto position = std::make_shared<Arkanoid::Position>(ballPosition);
-	auto velocity = std::make_shared<Arkanoid::Velocity>(ballVelocity, ballSpeed);
-	
-	sf::Vector2f paddleDefaultPosition{ windowWidth / 2, windowHeight - 50 };
-
-	auto rectangle = std::make_shared<Arkanoid::Rectangle>(paddleWidth, paddleHeight, sf::Color::Green);
-	auto paddlePosition = std::make_shared<Arkanoid::Position>(paddleDefaultPosition);
-	auto paddleVelocity = std::make_shared<Arkanoid::Velocity>(paddleDefaultVelocity, paddleSpeed);
 
 	auto rendererBuilder = Arkanoid::RendererBuilder(window);
-	rendererBuilder.AddRender(circle, position);
-	rendererBuilder.AddRender(rectangle, paddlePosition);
-
+    auto ballMover = Arkanoid::BallFactory::create(rendererBuilder);
+    auto paddleMover = Arkanoid::PaddleFactory::create(rendererBuilder);
 	auto renderer = rendererBuilder.Create();
-
-	auto ballMover = Arkanoid::MoverFactory<sf::CircleShape>::Create(circle, velocity);
-	auto paddleMover = Arkanoid::MoverFactory<sf::RectangleShape>::CreateKeyBounded(rectangle, paddleVelocity, paddleSpeed);
 
 	//auto ball = Arkanoid::Ball();
 	//ball.position = position;
